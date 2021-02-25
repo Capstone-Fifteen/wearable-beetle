@@ -91,6 +91,7 @@ MPU6050 mpu;
 
 #define INTERRUPT_PIN 2  // use pin 2 on Arduino Uno & most boards
 #define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
+#define EMG_INPUT_PIN 0     // define the used EMG input channel
 bool blinkState = false;
 
 // MPU control/status vars
@@ -155,10 +156,19 @@ long int imu_last_read_time = 0; //when the IMU was last read by the Beetle
 
 // Features vars
 int dancer_state = 0; // 0 is IDLE; 1 is Dancing
+
 bool feature_arm_pointing_down = false;
+
 int feature_left_right_null = 0; // 0 null; 1 left; 2 right
+
 int feature_high_acc = 0; // percentage of window in high acceleration
 int feature_low_acc = 0;// percentage of window in low acceleration
+
+float emg_mean = 0; // mean absolute value of emg during entire session
+long long emg_samples = 0; //number of emg samples taken during entire session
+int emg_startup_count = 0; // number of readings for the emg to calibrate and initialise
+
+int fatigue_flag = 0; // 0 not fatigued; 1 fatigued
 
 //Feature thresholds
 
@@ -175,6 +185,9 @@ int prop_high_acc = 30;
 
 // Threshold: Detect if moving LEFT or RIGHT when IDLE
 int acc_z_move_threshold = 500;
+
+// Threshold: Detect possible dancer fatigue
+float fatigue_threshold = 0.25;
 
 // ================================================================
 // ===               ACTIVITY DETECTION ROUTINE                ===
@@ -264,10 +277,10 @@ void detectActivity() {
 
   if (move_left_detected == true && move_right_detected == false) {
     feature_left_right_null = 1;
-//    Serial.println(feature_left_right_null);
+    Serial.println(feature_left_right_null);
   } else if (move_left_detected == false && move_right_detected == true) {
     feature_left_right_null = 2;
-//    Serial.println(feature_left_right_null);
+    Serial.println(feature_left_right_null);
   }
   
   
@@ -282,6 +295,35 @@ void detectActivity() {
       dancer_state = 0; // DANCING -> IDLE
     }
   }
+}
+
+void detectFatigue() {
+//  int emg_mean = 0; // mean absolute value of emg during entire session
+//  int emg_samples = 0; //number of emg samples taken during entire session
+//  int emg_startup_count = 0; // number of readings for the emg to calibrate and initialise
+  TimePlot Plot;
+  int EMGValue = analogRead(EMG_INPUT_PIN);
+//  Plot.SendData("Raw-EMG", EMGValue/1000.0);
+  if (emg_startup_count < 150) {
+    emg_startup_count++;
+  } else {
+    emg_samples++;
+    emg_mean = (emg_mean * (emg_samples - 1) + EMGValue/1000.0) / emg_samples;
+//    Plot.SendData("EMG-Mean", emg_mean);
+  }
+  // Set flag: Dancer Fatigue Flag
+  if (fatigue_flag == 0) {
+    if (emg_mean >= fatigue_threshold) {
+      fatigue_flag = 1; // not fatigued -> fatigued
+//      Plot.SendData("fatigue_flag", fatigue_flag);
+    }
+  } else if (fatigue_flag == 1) {
+    if (emg_mean < fatigue_threshold) {
+      fatigue_flag = 0; // fatigued -> not fatigued
+//      Plot.SendData("fatigue_flag", fatigue_flag);
+    }
+  }
+  
 }
 
 
@@ -450,7 +492,7 @@ void loop() {
 //        Plot.SendData("Filtered-AccVectorMag", AccVectorMag);
 //        Plot.SendData("Filtered-GyroYaw", GyroYawFilter.Current());
 //        Plot.SendData("Filtered-GyroPitch", GyroPitchFilter.Current());
-        Plot.SendData("Filtered-GyroRoll", GyroRollFilter.Current());
+//        Plot.SendData("Filtered-GyroRoll", GyroRollFilter.Current());
 
 //        Serial.print("areal\t");
 //        Serial.print(AccX/16384.0);
@@ -459,10 +501,12 @@ void loop() {
 //        Serial.print("\t");
 //        Serial.println(aaReal.z);
 
-      // blink LED to indicate activity
-      blinkState = !blinkState;
-      digitalWrite(LED_PIN, blinkState);
+        // blink LED to indicate activity
+        blinkState = !blinkState;
+        digitalWrite(LED_PIN, blinkState);
       }
+      
+      detectFatigue();
     }
     
 
