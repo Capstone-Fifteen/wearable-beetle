@@ -326,6 +326,37 @@ void detectFatigue() {
   
 }
 
+void setIMUOffsets() {
+  
+  int beetle_id = 2; // CHANGE AND UPLOAD FOR SELECTED BEETLE ID
+
+  if (beetle_id == 1) { //OG Beetle
+    mpu.setXGyroOffset(71);
+    mpu.setYGyroOffset(-19);
+    mpu.setZGyroOffset(-259);
+
+    mpu.setXAccelOffset(-5568);
+    mpu.setYAccelOffset(-1729);
+    mpu.setZAccelOffset(1318);
+  
+  } else if (beetle_id == 2) { // Beetle with EMG
+    mpu.setXGyroOffset(120);
+    mpu.setYGyroOffset(-26);
+    mpu.setZGyroOffset(-12);
+
+    mpu.setXAccelOffset(-5451);
+    mpu.setYAccelOffset(-2764);
+    mpu.setZAccelOffset(1660);
+  } else if (beetle_id == 3) { // Beetle with no strap yet
+    mpu.setXGyroOffset(42);
+    mpu.setYGyroOffset(-8);
+    mpu.setZGyroOffset(48);
+
+    mpu.setXAccelOffset(-855);
+    mpu.setYAccelOffset(2004);
+    mpu.setZAccelOffset(1444);
+  }
+}
 
 // ================================================================
 // ===                      INITIAL SETUP                       ===
@@ -373,19 +404,7 @@ void setup() {
     devStatus = mpu.dmpInitialize();
 
     // supply your own gyro offsets here, scaled for min sensitivity
-    mpu.setXGyroOffset(71);
-    mpu.setYGyroOffset(-19);
-    mpu.setZGyroOffset(-259);
-//    mpu.setXGyroOffset(0);
-//    mpu.setYGyroOffset(0);
-//    mpu.setZGyroOffset(0);
-    mpu.setXAccelOffset(-5568);
-    mpu.setYAccelOffset(-1729);
-    mpu.setZAccelOffset(1318);
-//    mpu.setXGyroOffset(17);
-//    mpu.setYGyroOffset(-69);
-//    mpu.setZGyroOffset(-259);
-//    mpu.setZAccelOffset(1551);
+    setIMUOffsets();
 
     // make sure it worked (returns 0 if so)
     if (devStatus == 0) {
